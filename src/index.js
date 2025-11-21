@@ -321,6 +321,92 @@ function createTree() {
 	return tree;
 }
 
+function createRock() {
+	const rock = new THREE.Group();
+	const material = new THREE.MeshStandardMaterial({
+		color: 0x888888,
+		roughness: 0.9,
+		flatShading: true
+	});
+	const geometry = new THREE.IcosahedronGeometry(1, 0);
+	const mesh = new THREE.Mesh(geometry, material);
+
+	// Randomize shape
+	mesh.scale.set(
+		1 + Math.random() * 0.5,
+		0.8 + Math.random() * 0.4,
+		1 + Math.random() * 0.5
+	);
+
+	rock.add(mesh);
+	return rock;
+}
+
+function createWaterTower() {
+	const tower = new THREE.Group();
+
+	const woodMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+
+	// Tank
+	const tankGeo = new THREE.CylinderGeometry(3, 3, 4, 16);
+	const tank = new THREE.Mesh(tankGeo, woodMat);
+	tank.position.y = 8;
+	tower.add(tank);
+
+	// Roof
+	const roofGeo = new THREE.ConeGeometry(3.5, 2, 16);
+	const roof = new THREE.Mesh(roofGeo, woodMat);
+	roof.position.y = 11;
+	tower.add(roof);
+
+	// Legs
+	for (let i = 0; i < 4; i++) {
+		const legGeo = new THREE.CylinderGeometry(0.2, 0.2, 8);
+		const leg = new THREE.Mesh(legGeo, woodMat);
+		const angle = (i / 4) * Math.PI * 2;
+		leg.position.x = Math.cos(angle) * 2;
+		leg.position.z = Math.sin(angle) * 2;
+		leg.position.y = 4;
+		tower.add(leg);
+	}
+
+	return tower;
+}
+
+function createSaloon() {
+	const saloon = new THREE.Group();
+	const woodColor = 0x8B4513;
+	const woodMat = new THREE.MeshStandardMaterial({ color: woodColor });
+
+	// Main building
+	const baseGeo = new THREE.BoxGeometry(8, 6, 8);
+	const base = new THREE.Mesh(baseGeo, woodMat);
+	base.position.y = 3;
+	saloon.add(base);
+
+	// False front
+	const frontGeo = new THREE.BoxGeometry(8, 8, 0.5);
+	const front = new THREE.Mesh(frontGeo, woodMat);
+	front.position.set(0, 4, 4); // Front face
+	saloon.add(front);
+
+	// Porch roof
+	const porchGeo = new THREE.BoxGeometry(8, 0.2, 3);
+	const porch = new THREE.Mesh(porchGeo, woodMat);
+	porch.position.set(0, 3.5, 5.5);
+	saloon.add(porch);
+
+	// Porch posts
+	for (let x of [-3.5, 3.5]) {
+		const postGeo = new THREE.CylinderGeometry(0.2, 0.2, 3.5);
+		const post = new THREE.Mesh(postGeo, woodMat);
+		post.position.set(x, 1.75, 6.8);
+		saloon.add(post);
+	}
+
+	return saloon;
+}
+
 function createHouse() {
 	const house = new THREE.Group();
 
@@ -372,33 +458,57 @@ function createCactus() {
 }
 
 function populateScenery(scene) {
-	for (let i = 0; i < 100; i++) {
-		// Alternate sides
-		const side = (i % 2 === 0) ? 1 : -1;
+	// Zone 1: The Town (0 to -100)
+	// Place buildings on both sides
+	for (let z = -10; z > -100; z -= 25) {
+		// Left side
+		const saloonLeft = createSaloon();
+		saloonLeft.position.set(-12, 0, z);
+		saloonLeft.rotation.y = Math.PI / 2;
+		scene.add(saloonLeft);
+		obstacles.push(saloonLeft);
 
-		// Position far from the road
-		const xPos = side * (15 + Math.random() * 40);
-		const zPos = -i * 20 - Math.random() * 10;
+		// Right side
+		const houseRight = createHouse();
+		houseRight.position.set(12, 0, z);
+		houseRight.rotation.y = -Math.PI / 2;
+		scene.add(houseRight);
+		obstacles.push(houseRight);
+	}
+
+	// Water Tower at the end of town
+	const tower = createWaterTower();
+	tower.position.set(15, 0, -110);
+	scene.add(tower);
+	obstacles.push(tower);
+
+	// Zone 2: Wilderness (-100 to -1000)
+	for (let i = 0; i < 200; i++) {
+		const side = (i % 2 === 0) ? 1 : -1;
+		const xPos = side * (10 + Math.random() * 50);
+		const zPos = -120 - i * 10 - Math.random() * 10;
 
 		const rand = Math.random();
-		if (rand > 0.6) { // 40% chance of a tree
-			const tree = createTree();
-			tree.position.set(xPos, 0, zPos);
-			tree.rotation.y = Math.random() * Math.PI;
-			scene.add(tree);
-			obstacles.push(tree);
-		} else if (rand > 0.3) { // 30% chance of a house
-			const house = createHouse();
-			house.position.set(xPos, 0, zPos);
-			house.rotation.y = Math.random() * Math.PI;
-			scene.add(house);
-			obstacles.push(house);
-		} else { // 30% chance of a cactus
+		if (rand > 0.7) {
+			const rock = createRock();
+			rock.position.set(xPos, 0, zPos);
+			rock.rotation.y = Math.random() * Math.PI;
+			const scale = 1 + Math.random() * 3;
+			rock.scale.setScalar(scale);
+			scene.add(rock);
+			obstacles.push(rock);
+		} else if (rand > 0.4) {
 			const cactus = createCactus();
 			cactus.position.set(xPos, 0, zPos);
 			cactus.rotation.y = Math.random() * Math.PI;
 			scene.add(cactus);
 			obstacles.push(cactus);
+		} else {
+			// Dead bush / small rock
+			const rock = createRock();
+			rock.position.set(xPos, 0, zPos);
+			rock.scale.setScalar(0.5);
+			scene.add(rock);
 		}
 	}
 }
@@ -407,18 +517,18 @@ function setupScene({ scene, camera, _renderer, player, _controllers, controls }
 	// Store global camera reference for cowboy targeting
 	globalCamera = camera;
 
-	// Fog
-	const fogColor = 0xeebb99; // Desert dust color
-	scene.fog = new THREE.Fog(fogColor, 20, 100);
+	// Sunset Atmosphere
+	const fogColor = 0x874c62; // Dusty purple/red
+	scene.fog = new THREE.Fog(fogColor, 20, 90); // Closer fog for atmosphere
 	scene.background = new THREE.Color(fogColor);
 
 	// Create road
 	createRoad(scene);
 
 	// Ground Plane
-	const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+	const groundGeo = new THREE.PlaneGeometry(2000, 2000);
 	const groundMat = new THREE.MeshStandardMaterial({
-		color: 0xeebb99,
+		color: 0xba8c63, // Darker sand
 		roughness: 1,
 		metalness: 0
 	});
@@ -430,11 +540,11 @@ function setupScene({ scene, camera, _renderer, player, _controllers, controls }
 	populateScenery(scene);
 
 	// Lighting
-	const ambientLight = new THREE.AmbientLight(0xffccaa, 0.6); // Warm ambient
+	const ambientLight = new THREE.AmbientLight(0x402040, 1.0); // Purple ambient
 	scene.add(ambientLight);
 
-	const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-	sunLight.position.set(50, 100, 50);
+	const sunLight = new THREE.DirectionalLight(0xffaa33, 2.0); // Orange sun
+	sunLight.position.set(-50, 30, -20); // Low angle sun
 	sunLight.castShadow = true;
 	scene.add(sunLight);
 
