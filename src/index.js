@@ -11,6 +11,7 @@ import * as THREE from 'three';
 // Multiple imports next, sorted by imported identifier (ESLint sort-imports)
 import { XR_AXES, XR_BUTTONS } from 'gamepad-wrapper';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { createMangaMaterial } from './MangaMaterial.js';
 import { gsap } from 'gsap';
 import { init } from './init.js';
 
@@ -513,13 +514,24 @@ function populateScenery(scene) {
 	}
 }
 
+// ... (existing imports)
+
+function applyMangaStyle(object) {
+	if (object.isMesh) {
+		object.material = createMangaMaterial(object.material);
+	}
+	if (object.children) {
+		object.children.forEach(applyMangaStyle);
+	}
+}
+
 function setupScene({ scene, camera, _renderer, player, _controllers, controls }) {
 	// Store global camera reference for cowboy targeting
 	globalCamera = camera;
 
-	// Sunset Atmosphere
-	const fogColor = 0x874c62; // Dusty purple/red
-	scene.fog = new THREE.Fog(fogColor, 20, 90); // Closer fog for atmosphere
+	// Sunset Atmosphere (Manga Style: High Contrast White Background)
+	const fogColor = 0xffffff; // White fog for manga look
+	scene.fog = new THREE.Fog(fogColor, 20, 90);
 	scene.background = new THREE.Color(fogColor);
 
 	// Create road
@@ -528,7 +540,7 @@ function setupScene({ scene, camera, _renderer, player, _controllers, controls }
 	// Ground Plane
 	const groundGeo = new THREE.PlaneGeometry(2000, 2000);
 	const groundMat = new THREE.MeshStandardMaterial({
-		color: 0xba8c63, // Darker sand
+		color: 0xffffff, // White ground
 		roughness: 1,
 		metalness: 0
 	});
@@ -539,18 +551,21 @@ function setupScene({ scene, camera, _renderer, player, _controllers, controls }
 
 	populateScenery(scene);
 
-	// Lighting
-	const ambientLight = new THREE.AmbientLight(0x402040, 1.0); // Purple ambient
+	// Apply Manga Style to everything created so far
+	scene.traverse(applyMangaStyle);
+
+	// Lighting (High Intensity for contrast)
+	const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
 	scene.add(ambientLight);
 
-	const sunLight = new THREE.DirectionalLight(0xffaa33, 2.0); // Orange sun
-	sunLight.position.set(-50, 30, -20); // Low angle sun
+	const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+	sunLight.position.set(-50, 30, -20);
 	sunLight.castShadow = true;
 	scene.add(sunLight);
 
 	// Create a circle around the player
 	const ringGeometry = new THREE.RingGeometry(1.9, 2, 32);
-	const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+	const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide }); // Black ring
 	const ring = new THREE.Mesh(ringGeometry, ringMaterial);
 	ring.rotation.x = -Math.PI / 2; // Rotate it to be flat on the ground
 	ring.position.y = 0.1; // Lift it slightly above the ground
